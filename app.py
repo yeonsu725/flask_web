@@ -45,6 +45,13 @@ def articles():
     list_data = Articles()
     return render_template('articles.html', data=list_data)
 
+@app.route('/detail/<ids>')
+# params 처리한다(=parameter(매개변수,인자) 처리한다) --> 현재 detail뒤에 1,2,3 id값이 변형되면서 오는데 여기다가 그걸 어떻게 표현하냐?? params 처리하면된다.
+# 그때그때마다 변하는 값을 어떻게 받아오냐 parameter처리를 하여 받아온다 
+# params 처리를 할때는 꺽쇄표시 <> 를 해야함 !! 
+def detail(ids):
+    return ids
+
 
 if __name__ == '__main__':
     app.run(debug=True)
