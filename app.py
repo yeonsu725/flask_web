@@ -1,6 +1,14 @@
-from flask import Flask , render_template
+from flask import Flask , render_template # flask 가져오기 
 from data import Articles # data파일에서 함수이름 가져온거임 
-# flask 가져오기 
+import pymysql
+
+db_connection = pymysql.connect(
+	    user    = 'root',
+        passwd  = '1234',
+    	host    = '127.0.0.1',
+    	db      = 'gangnam',
+    	charset = 'utf8'
+)
 
 app = Flask(__name__)
 # 서버 띄우기 
@@ -42,15 +50,33 @@ def index():
 
 @app.route('/articles', methods=['GET','POST'])
 def articles():
-    list_data = Articles()
-    return render_template('articles.html', data=list_data)
+    # list_data = Articles() 가라 데이터 이제 지울거임 sql만들었으니까 
+    cursor = db_connection.cursor()
+    sql = 'SELECT * FROM list;' 
+    cursor.execute(sql)
+    topics = cursor.fetchall() # db에서 조회한 결과를 fetchall이라는 걸로 모든결과물을 불러와서 보여준다~ 
+    print(topics)
+    return render_template('articles.html', data=topics)
 
 @app.route('/detail/<ids>')
 # params 처리한다(=parameter(매개변수,인자) 처리한다) --> 현재 detail뒤에 1,2,3 id값이 변형되면서 오는데 여기다가 그걸 어떻게 표현하냐?? params 처리하면된다.
 # 그때그때마다 변하는 값을 어떻게 받아오냐 parameter처리를 하여 받아온다 
 # params 처리를 할때는 꺽쇄표시 <> 를 해야함 !! 
 def detail(ids):
-    return ids
+    # list_data = Articles() # 클릭시 상세페이지로 이동 
+    cursor = db_connection.cursor()
+
+    # 퀴리 조건문 
+    sql = f'SELECT * FROM list WHERE id={int(ids)};' # https://bluese05.tistory.com/70
+    cursor.execute(sql)
+    topic = cursor.fetchone() # 여기선 한개만 받아옴 // 하나만 조회를 할때는 fetchone을 사용하면됨 
+    print(topic)
+
+    # for data in list_data:
+    #     if data['id']==int(ids):
+    #         article = data  # 이제 가라데이터가 사라지고 sql문으로 database를 불러오기때문에 for문을 사용하여 실행할 필요가 없음 
+    return render_template('article.html', article=topic) 
+    # Articles 가 article = data 이며 article=article의 오른쪽 article 
 
 
 if __name__ == '__main__':
