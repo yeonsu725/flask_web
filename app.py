@@ -1,4 +1,4 @@
-from flask import Flask , render_template # flask 가져오기 
+from flask import Flask , render_template, redirect # flask 가져오기 
 from data import Articles # data파일에서 함수이름 가져온거임 
 import pymysql
 
@@ -74,10 +74,21 @@ def detail(ids):
 
     # for data in list_data:
     #     if data['id']==int(ids):
-    #         article = data  # 이제 가라데이터가 사라지고 sql문으로 database를 불러오기때문에 for문을 사용하여 실행할 필요가 없음 
+    #         article = data  # 이제 가라데이터가 사라지고 sql문으로 database(= schema)를 불러오기때문에 for문을 사용하여 실행할 필요가 없음 
     return render_template('article.html', article=topic) 
     # Articles 가 article = data 이며 article=article의 오른쪽 article 
+    # 가라데이터 data.py는 딕셔너리 형태의 데이터였음 하지만 sql문으로 만든 database는 튜플형태로 반환을 함
+    # 그래서 article , articles.html 의 데이터를 딕셔너리 형태에서 튜플문으로 바꿔줘야지 표기가 된다. 
 
+@app.route('/delete/<ids>', methods=['GET', 'POST'])
+def delete(ids):
+    cursor = db_connection.cursor()
+    sql = f'DELETE FROM list WHERE (id = {ids});' # 삭제하는 거니까 선택select가 아닌 delete 
+    cursor.execute(sql)
+    db_connection.commit() # 수정하거나 추가하거나 삭제하면 commit을 사용하는거임 fetch는 조회할때 쓰는거임 
+    
+    return redirect('/articles') # 이렇게 하면 @app.route('/articles' 여기로 가서 다시 실행하는거임 
+    # render_template 을 사용하면 데이터를 또 줘야하자나 우린 삭제한건데 데이터를 넣을 필요는 없지??? 
 
 if __name__ == '__main__':
     app.run(debug=True)
