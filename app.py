@@ -1,4 +1,4 @@
-from flask import Flask , render_template, redirect # flask 가져오기 
+from flask import Flask , render_template, redirect, request # flask 가져오기 
 from data import Articles # data파일에서 함수이름 가져온거임 
 import pymysql
 
@@ -90,5 +90,33 @@ def delete(ids):
     return redirect('/articles') # 이렇게 하면 @app.route('/articles' 여기로 가서 다시 실행하는거임 
     # render_template 을 사용하면 데이터를 또 줘야하자나 우린 삭제한건데 데이터를 넣을 필요는 없지??? 
 
+# 웹상에서 데이터 저장기능 만들기 
+@app.route('/add_article', methods = ['GET', 'POST'])
+def add_article():
+    # get 이냐 post에 따라 다르게
+    if request.method == 'GET':
+        return render_template('add_article.html')
+   
+    else:
+        title = request.form["title"]
+        desc = request.form["desc"]
+        author = request.form["author"]
+        # 위에서 form으로 잘 받아왔기 때문에 db에 저장하는게 이제 필요함!!
+
+        # db에 저장하려면 cursor = db_connection.cursor()이거 필요함!
+        cursor = db_connection.cursor()
+        sql = f"INSERT INTO list (title, description, author) VALUES ('{title}', '{desc}', '{author}');"
+        # description 은 sql문의 컬럼이고 request.form[desc]는 add_article.html의 name과 같아야함
+        # 그리고 desc와 '{desc}' 가 같은 거임 
+        cursor.execute(sql)
+        db_connection.commit()
+        return redirect('/articles')
+
+
+
+
+
+
 if __name__ == '__main__':
     app.run(debug=True)
+
