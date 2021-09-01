@@ -147,10 +147,21 @@ def register():
         password = request.form['password']
 
         cursor = db_connection.cursor()
-        sql = f"INSERT INTO users (username, email, password) VALUES ('{username}', '{email}', '{password}');"
-        cursor.execute(sql)
-        db_connection.commit()
-        return redirect('/')
+
+        #중복체크 만들기
+        sql_1 = f"SELECT * FROM users WHERE email='{email}'" # 세미콜론 없어도 됨 
+        cursor.execute(sql_1)
+        user = cursor.fetchone() 
+        print(user)
+
+        if user == None:
+            sql = f"INSERT INTO users (username, email, password) VALUES ('{username}', '{email}', '{password}');"
+            cursor.execute(sql)
+            db_connection.commit()
+            return redirect('/') # 이메일을 입력했을 시 같은 이메일이 없다면 즉, 중복이 아니라면 홈화면으로 돌아가고 
+        else:
+            return redirect('/register') # none이 아니고 중복된 이메일을 입력했을 시 다시 회원가입 화면으로 ㄱㄱ!
+            
 
 
 
