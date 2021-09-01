@@ -112,8 +112,45 @@ def add_article():
         db_connection.commit()
         return redirect('/articles')
 
+# 편집버튼 활성화 시키기 
+@app.route('/edit_article/<ids>', methods=['GET', 'POST'])
+def edit_article(ids):
+    if request.method == 'GET':
+        cursor = db_connection.cursor()
+        sql = f'SELECT * FROM list WHERE id={int(ids)};'
+        cursor.execute(sql)
+        topic = cursor.fetchone()
 
 
+        return render_template('edit_article.html', article=topic) 
+    else: 
+        title = request.form["title"]
+        desc = request.form["desc"]
+        author = request.form["author"]
+        # request 클라이언트가 요청하는 걸 request라고 함 
+        # 요청을 날릴때 get, post던지 엄청 많은 양을 날림, 그 많은 정보중에서 필요한 것만 날려주는게 request 다.
+        # 그 중 request의 메서드중 form 이라는 걸 이용하면 클라이언트가 요청(request)한 것중에 form형식을 받아볼수 있는 거임 
+
+        cursor = db_connection.cursor()
+        sql = f"UPDATE list SET title = '{title}', description = '{desc}', author = '{author}' WHERE (id = {int(ids)});"
+        cursor.execute(sql)
+        db_connection.commit()
+        return redirect('/articles')
+
+@app.route('/register', methods=['GET','POST'])
+def register():
+    if request.method == 'GET':
+        return render_template('register.html')
+    else:
+        username = request.form['username']
+        email = request.form['email']
+        password = request.form['password']
+
+        cursor = db_connection.cursor()
+        sql = f"INSERT INTO users (username, email, password) VALUES ('{username}', '{email}', '{password}');"
+        cursor.execute(sql)
+        db_connection.commit()
+        return redirect('/')
 
 
 
