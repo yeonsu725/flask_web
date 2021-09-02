@@ -1,11 +1,22 @@
-from flask import Flask , render_template, redirect, request, session  # flask 가져오기 session : 로그인유지기능 만들기 
-from data import Articles # data파일에서 함수이름 가져온거임 
+from flask import Flask , render_template, redirect, request, session, url_for  # flask 가져오기 session : 로그인유지기능 만들기 
+# from data import Articles # data파일에서 함수이름 가져온거임 db가 mysql로 바뀌면서 이제 필요없어짐 
 import pymysql
 from passlib.hash import pbkdf2_sha256
+from functools import wraps 
+from pymongo import MongoClient
+
 
 app = Flask(__name__)
 # 서버 띄우기 
 # __name__:자체내장변수 
+
+client = MongoClient("mongodb+srv://root:1234@cluster0.g4bac.mongodb.net/test?retryWrites=true&w=majority",tls=True,tlsAllowInvalidCertificates=True)
+db = client.gangnam
+db_user = client.users
+
+list = db.list 
+users = db_user.users
+
 
 app.config['SECRET_KEY'] = 'gangnam' 
 
@@ -17,11 +28,31 @@ db_connection = pymysql.connect(
     	charset = 'utf8'
 )
 
+# 권한을 부여해서 로그인 상태에서만 편집, 삭제, 글쓰기가 가능하게 하는 기능을 구현한다.
+# 로그인 , 관리자 체크하는 함수를 만들어서 데코레이트를 만들어준다. 
+def is_logged_in(f): # f: 함수, 인자값으로 함수를 받는구나 하고 알면됨 
+    @wraps(f)
+    def wrap(*args, **kwargs): # 얼마만큼의 정보를 받을지 모르기에 가변인자와 키가변인자를 받는다고 써놓는다.
+        if 'is_logged' in session:
+            return f(*args, **kwargs) # pass와 같은 의미 
+        else:
+            return redirect(url_for('login')) # /login = url_for('login') 같은 의미 
+    return wrap 
+
+# 삭제는 admin(관리자)만 할수있도록 만들어보기
+def is_admin(f):
+    @wraps(f)
+    def wrap(*args, **kwargs):
+        if session['email'] == '2@naver.com':
+            return f(*args, **kwargs)
+        else:
+            return redirect(url_for('articles'))
+    return wrap 
 
 
-# @app.route('/hello')
-# def hello_world():
-#     return 'Hello World!'
+@app.route('/hello')
+def hello_world():
+    return 'Hello World!'
 # 반응하는 코드를 만드는 애 
 # / : 경로 /뒤에 hello를 쓰면 접속주소가 http://localhost:5000/ 에서 -->http://localhost:5000/hello 이걸로 바뀜 
 
@@ -95,6 +126,8 @@ def detail(ids):
 
 
 @app.route('/delete/<ids>', methods=['GET', 'POST'])
+@is_logged_in
+@is_admin
 def delete(ids):
     cursor = db_connection.cursor()
     sql = f'DELETE FROM list WHERE (id = {ids});' # 삭제하는 거니까 선택select가 아닌 delete 
@@ -104,8 +137,11 @@ def delete(ids):
     return redirect('/articles') # 이렇게 하면 @app.route('/articles' 여기로 가서 다시 실행하는거임 
     # render_template 을 사용하면 데이터를 또 줘야하자나 우린 삭제한건데 데이터를 넣을 필요는 없지??? 
 
+
+
 # 웹상에서 데이터 저장기능 만들기 
 @app.route('/add_article', methods = ['GET', 'POST'])
+@is_logged_in
 def add_article():
     # get 이냐 post에 따라 다르게
     if request.method == 'GET':
@@ -116,6 +152,8 @@ def add_article():
         desc = request.form["desc"]
         author = request.form["author"]
         # 위에서 form으로 잘 받아왔기 때문에 db에 저장하는게 이제 필요함!!
+
+        list.insert_one({"title":title, "description":desc, "author":author})
 
         # db에 저장하려면 cursor = db_connection.cursor()이거 필요함!
         cursor = db_connection.cursor()
@@ -128,6 +166,7 @@ def add_article():
 
 # 편집버튼 활성화 시키기 
 @app.route('/edit_article/<ids>', methods=['GET', 'POST'])
+@is_logged_in
 def edit_article(ids):
     if request.method == 'GET':
         cursor = db_connection.cursor()
@@ -159,6 +198,7 @@ def register():
         username = request.form['username']
         email = request.form['email']
         password = pbkdf2_sha256.hash(request.form['password']) # 비밀번호 암호화 
+        users.insert_one({"username":username, "email":email, "password":password})
         cursor = db_connection.cursor()
 
         #중복체크 만들기
@@ -202,6 +242,8 @@ def login():
                 session['username'] = user[1] # username
                 session['email'] = user[2] # email
                 session['date'] = user[4] # create_at
+                session['is_logged'] = True
+                
                 print(session)
                 return redirect('/')
             else:
@@ -213,6 +255,12 @@ def login():
 def logout():
     session.clear() # session 지워주는 역할을 함 
     return redirect('/')
+
+# 권한을 부여해서 로그인 상태에서만 편집, 삭제, 글쓰기가 가능하게 하는 기능을 구현한다.
+# 로그인, 로그아웃, 관리자 체크하는 함수를 만들어서 데코레이트를 만들어준다. 
+
+
+
 
 if __name__ == '__main__':
     app.run(debug=True)
