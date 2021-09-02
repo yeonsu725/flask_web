@@ -1,4 +1,15 @@
 {% extends 'layout.html'%} {% block body%}
 <h1>INDEX PAGE</h1>
-<h1>Hello {{ data }}</h1>
-{% endblock %}
+
+{% if user|length == 0 %}
+<h1>Hello GUEST</h1>
+
+
+{% else %}
+<h1>Hello {{ user['username'] }} 님</h1>
+
+{% endif %} {% endblock %}
+<!-- user 라고 세션을 보냈자나? 프론트엔드에서 진자2문법으로 섞어서 데이터를 같이 보낼수 있자나!!  app.py에서 던져줄때 
+로그인 안되있으면 세션에 아무것도 저장이 안되있음 , 아무것도 없을 때를 대비해서 user가 아무것도없으면(null) 이라고 대비를 만들었음
+% if user|lenth == 0 % user또는 length가 0 일때  
+-->

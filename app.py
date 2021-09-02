@@ -1,7 +1,13 @@
-from flask import Flask , render_template, redirect, request # flask 가져오기 
+from flask import Flask , render_template, redirect, request, session  # flask 가져오기 session : 로그인유지기능 만들기 
 from data import Articles # data파일에서 함수이름 가져온거임 
 import pymysql
 from passlib.hash import pbkdf2_sha256
+
+app = Flask(__name__)
+# 서버 띄우기 
+# __name__:자체내장변수 
+
+app.config['SECRET_KEY'] = 'gangnam' 
 
 db_connection = pymysql.connect(
 	    user    = 'root',
@@ -11,13 +17,11 @@ db_connection = pymysql.connect(
     	charset = 'utf8'
 )
 
-app = Flask(__name__)
-# 서버 띄우기 
-# __name__:자체내장변수 
 
-@app.route('/hello')
-def hello_world():
-    return 'Hello World!'
+
+# @app.route('/hello')
+# def hello_world():
+#     return 'Hello World!'
 # 반응하는 코드를 만드는 애 
 # / : 경로 /뒤에 hello를 쓰면 접속주소가 http://localhost:5000/ 에서 -->http://localhost:5000/hello 이걸로 바뀜 
 
@@ -45,9 +49,12 @@ def hello_world():
 @app.route('/', methods=['GET', 'POST'])
 def index():
     name = 'KIM'
-    return render_template('index.html', data=name) # render_template 플라스크안에있는 라이브러리이기 때문에 위에서 import 해줘야함 
+    print(len(session))
+    return render_template('index.html', data=name, user=session) # render_template 플라스크안에있는 라이브러리이기 때문에 위에서 import 해줘야함 
     # render_template 를 실행시키면 templates 라는 폴더를 찾게됨. 그안에있는 index.html파일의 내용이 localhost:5000에 표기됨
     # render_template는 index.html를 랜더링 해주면서 data를 실어보낼수 있음 
+
+
 
 @app.route('/articles', methods=['GET','POST'])
 def articles():
@@ -57,7 +64,10 @@ def articles():
     cursor.execute(sql)
     topics = cursor.fetchall() # db에서 조회한 결과를 fetchall이라는 걸로 모든결과물을 불러와서 보여준다~ 
     print(topics)
-    return render_template('articles.html', data=topics)
+    return render_template('articles.html', data=topics, user=session)
+
+
+
 
 @app.route('/detail/<ids>')
 # params 처리한다(=parameter(매개변수,인자) 처리한다) --> 현재 detail뒤에 1,2,3 id값이 변형되면서 오는데 여기다가 그걸 어떻게 표현하냐?? params 처리하면된다.
@@ -76,10 +86,13 @@ def detail(ids):
     # for data in list_data:
     #     if data['id']==int(ids):
     #         article = data  # 이제 가라데이터가 사라지고 sql문으로 database(= schema)를 불러오기때문에 for문을 사용하여 실행할 필요가 없음 
-    return render_template('article.html', article=topic) 
+    return render_template('article.html', article=topic, user=session) 
     # Articles 가 article = data 이며 article=article의 오른쪽 article 
     # 가라데이터 data.py는 딕셔너리 형태의 데이터였음 하지만 sql문으로 만든 database는 튜플형태로 반환을 함
     # 그래서 article , articles.html 의 데이터를 딕셔너리 형태에서 튜플문으로 바꿔줘야지 표기가 된다. 
+
+
+
 
 @app.route('/delete/<ids>', methods=['GET', 'POST'])
 def delete(ids):
@@ -96,7 +109,7 @@ def delete(ids):
 def add_article():
     # get 이냐 post에 따라 다르게
     if request.method == 'GET':
-        return render_template('add_article.html')
+        return render_template('add_article.html', user=session)
    
     else:
         title = request.form["title"]
@@ -141,7 +154,7 @@ def edit_article(ids):
 @app.route('/register', methods=['GET','POST'])
 def register():
     if request.method == 'GET':
-        return render_template('register.html')
+        return render_template('register.html', user=session)
     else:
         username = request.form['username']
         email = request.form['email']
@@ -166,7 +179,7 @@ def register():
 @app.route('/login', methods=['GET', 'POST'])
 def login():
     if request.method == 'GET':
-        return render_template('login.html')
+        return render_template('login.html', user=session)
     else:
         email = request.form['email']
         password = request.form['password']
@@ -184,10 +197,22 @@ def login():
             #비번 맞는지 비교해야지  
             result = pbkdf2_sha256.verify(password, user[3])   
             if result == True:
-                return "SUCCESS"
+                # 로그인 유지기능 만들기 , secret 키가 필요함 
+                session['id'] = user[0] # index 번호 
+                session['username'] = user[1] # username
+                session['email'] = user[2] # email
+                session['date'] = user[4] # create_at
+                print(session)
+                return redirect('/')
             else:
                 return redirect('/login')
-        
+
+
+# 로그아웃 만들기
+@app.route('/logout', methods=['GET', 'POST'])
+def logout():
+    session.clear() # session 지워주는 역할을 함 
+    return redirect('/')
 
 if __name__ == '__main__':
     app.run(debug=True)
