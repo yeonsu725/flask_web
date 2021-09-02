@@ -1,6 +1,7 @@
 from flask import Flask , render_template, redirect, request # flask 가져오기 
 from data import Articles # data파일에서 함수이름 가져온거임 
 import pymysql
+from passlib.hash import pbkdf2_sha256
 
 db_connection = pymysql.connect(
 	    user    = 'root',
@@ -144,8 +145,7 @@ def register():
     else:
         username = request.form['username']
         email = request.form['email']
-        password = request.form['password']
-
+        password = pbkdf2_sha256.hash(request.form['password']) # 비밀번호 암호화 
         cursor = db_connection.cursor()
 
         #중복체크 만들기
@@ -162,8 +162,32 @@ def register():
         else:
             return redirect('/register') # none이 아니고 중복된 이메일을 입력했을 시 다시 회원가입 화면으로 ㄱㄱ!
             
+# 로그인 만들기
+@app.route('/login', methods=['GET', 'POST'])
+def login():
+    if request.method == 'GET':
+        return render_template('login.html')
+    else:
+        email = request.form['email']
+        password = request.form['password']
+        sql_1 = f"SELECT * FROM users WHERE email='{email}'"
+        cursor = db_connection.cursor()
+        cursor.execute(sql_1)
+        user = cursor.fetchone()
+        print(user)
 
-
+        if user == None:
+            # user가 none이면 아이디 틀리게 친거니까 로그인화면으로 보내버리자 
+            return redirect('/login')
+        
+        else:
+            #비번 맞는지 비교해야지  
+            result = pbkdf2_sha256.verify(password, user[3])   
+            if result == True:
+                return "SUCCESS"
+            else:
+                return redirect('/login')
+        
 
 if __name__ == '__main__':
     app.run(debug=True)
